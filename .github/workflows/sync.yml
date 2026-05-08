@@ -1,0 +1,34 @@
+name: zaim-sheet-sync
+
+on:
+  schedule:
+    - cron: '0 0 * * *'   # 毎日 09:00 JST（UTC 00:00）
+  workflow_dispatch:        # 手動実行用
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run sync
+        env:
+          ZAIM_CONSUMER_KEY: ${{ secrets.ZAIM_CONSUMER_KEY }}
+          ZAIM_CONSUMER_SECRET: ${{ secrets.ZAIM_CONSUMER_SECRET }}
+          ZAIM_ACCESS_TOKEN: ${{ secrets.ZAIM_ACCESS_TOKEN }}
+          ZAIM_ACCESS_TOKEN_SECRET: ${{ secrets.ZAIM_ACCESS_TOKEN_SECRET }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          ROUTINE_WEBHOOK_URL: ${{ secrets.ROUTINE_WEBHOOK_URL }}
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+        run: python src/main.py
