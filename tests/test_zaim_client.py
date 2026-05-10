@@ -55,7 +55,6 @@ def test_fetch_uses_place_for_payment(mock_session_cls):
     mock_resp.json.return_value = {
         "money": [
             {"id": 10, "date": "2026-05-09", "amount": 980, "place": "ローソン", "name": ""},
-            {"id": 11, "date": "2026-05-09", "amount": 100000, "place": "", "name": "給与"},
         ]
     }
     mock_session_cls.return_value.get.return_value = mock_resp
@@ -63,7 +62,20 @@ def test_fetch_uses_place_for_payment(mock_session_cls):
     records = ZaimClient().fetch_yesterday()
 
     assert records[0]["name"] == "ローソン"
-    assert records[1]["name"] == "給与"
+
+
+@patch("zaim_client.OAuth1Session")
+def test_fetch_sends_payment_mode_and_limit(mock_session_cls):
+    mock_resp = MagicMock(status_code=200)
+    mock_resp.json.return_value = {"money": []}
+    mock_get = mock_session_cls.return_value.get
+    mock_get.return_value = mock_resp
+
+    ZaimClient().fetch_yesterday()
+
+    _, kwargs = mock_get.call_args
+    assert kwargs["params"]["mode"] == "payment"
+    assert kwargs["params"]["limit"] == 100
 
 
 @patch("zaim_client.OAuth1Session")

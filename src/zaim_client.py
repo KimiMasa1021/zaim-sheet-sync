@@ -30,7 +30,7 @@ class ZaimClient:
 
     def _fetch_money(self, start_date: str, end_date: str) -> list[dict]:
         url = f"{ZAIM_API_BASE}/home/money"
-        params = {"mapping": 1, "start_date": start_date, "end_date": end_date}
+        params = {"mapping": 1, "mode": "payment", "limit": 100, "start_date": start_date, "end_date": end_date}
 
         for delay in [*_RETRY_DELAYS, None]:
             resp = self._session.get(url, params=params)
