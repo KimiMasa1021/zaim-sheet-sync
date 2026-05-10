@@ -1,5 +1,7 @@
+import argparse
 import logging
 import os
+from datetime import date, datetime
 
 import requests
 
@@ -7,16 +9,35 @@ from normalizer import normalize
 from sheets_client import SheetsClient
 from zaim_client import ZaimAuthError, ZaimClient
 
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
 
-def main() -> None:
+def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Sync Zaim records to Google Sheets")
+    parser.add_argument(
+        "--start-date",
+        default=None,
+        help="Fetch records from this date (YYYY-MM-DD) through today. "
+        "If omitted, fetches yesterday only.",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> None:
+    args = _parse_args(argv)
     logger.info("Starting zaim-sheet-sync")
 
     zaim = ZaimClient()
     try:
-        records = zaim.fetch_yesterday()
+        if args.start_date:
+            datetime.strptime(args.start_date, "%Y-%m-%d")
+            end_date = date.today().strftime("%Y-%m-%d")
+            logger.info("Fetching range %s to %s", args.start_date, end_date)
+            records = zaim.fetch_range(args.start_date, end_date)
+        else:
+            records = zaim.fetch_yesterday()
     except ZaimAuthError as e:
         logger.error(str(e))
         raise
