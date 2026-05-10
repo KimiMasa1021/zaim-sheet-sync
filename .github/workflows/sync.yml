@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: '0 0 * * *'   # 毎日 09:00 JST（UTC 00:00）
   workflow_dispatch:        # 手動実行用
+    inputs:
+      start_date:
+        description: '取得開始日 (YYYY-MM-DD)。指定すると当日までの範囲を取得。空なら昨日1日分。'
+        required: false
+        type: string
+        default: ''
 
 jobs:
   sync:
@@ -31,4 +37,9 @@ jobs:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
           ROUTINE_WEBHOOK_URL: ${{ secrets.ROUTINE_WEBHOOK_URL }}
           SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
-        run: python src/main.py
+        run: |
+          if [ -n "${{ inputs.start_date }}" ]; then
+            python src/main.py --start-date "${{ inputs.start_date }}"
+          else
+            python src/main.py
+          fi

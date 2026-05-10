@@ -25,6 +25,9 @@ class ZaimClient:
         yesterday = (date.today() - timedelta(days=1)).strftime("%Y-%m-%d")
         return self._fetch_money(yesterday, yesterday)
 
+    def fetch_range(self, start_date: str, end_date: str) -> list[dict]:
+        return self._fetch_money(start_date, end_date)
+
     def _fetch_money(self, start_date: str, end_date: str) -> list[dict]:
         url = f"{ZAIM_API_BASE}/home/money"
         params = {"mapping": 1, "start_date": start_date, "end_date": end_date}
