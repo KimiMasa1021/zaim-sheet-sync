@@ -16,7 +16,7 @@ def zaim_env(monkeypatch):
 def test_fetch_returns_records(mock_session_cls):
     mock_resp = MagicMock(status_code=200)
     mock_resp.json.return_value = {
-        "money": [{"id": 1, "date": "2026-05-07", "amount": 500, "name": "test"}]
+        "money": [{"id": 1, "mode": "payment", "date": "2026-05-07", "amount": 500, "place": "test", "name": ""}]
     }
     mock_session_cls.return_value.get.return_value = mock_resp
 
@@ -54,7 +54,7 @@ def test_fetch_uses_place_for_payment(mock_session_cls):
     mock_resp = MagicMock(status_code=200)
     mock_resp.json.return_value = {
         "money": [
-            {"id": 10, "date": "2026-05-09", "amount": 980, "place": "ローソン", "name": ""},
+            {"id": 10, "mode": "payment", "date": "2026-05-09", "amount": 980, "place": "ローソン", "name": ""},
         ]
     }
     mock_session_cls.return_value.get.return_value = mock_resp
@@ -65,7 +65,27 @@ def test_fetch_uses_place_for_payment(mock_session_cls):
 
 
 @patch("zaim_client.OAuth1Session")
-def test_fetch_sends_payment_mode_and_limit(mock_session_cls):
+def test_fetch_filters_non_payment_modes(mock_session_cls):
+    """income/transfer レコードはローカルフィルタで除外される"""
+    mock_resp = MagicMock(status_code=200)
+    mock_resp.json.return_value = {
+        "money": [
+            {"id": 1, "mode": "payment", "date": "2026-05-09", "amount": 500, "place": "スーパー", "name": ""},
+            {"id": 2, "mode": "income", "date": "2026-05-09", "amount": 10000, "place": "", "name": "給与"},
+            {"id": 3, "mode": "transfer", "date": "2026-05-09", "amount": 1000, "place": "", "name": ""},
+        ]
+    }
+    mock_session_cls.return_value.get.return_value = mock_resp
+
+    records = ZaimClient().fetch_yesterday()
+
+    assert len(records) == 1
+    assert records[0]["zaim_id"] == "1"
+    assert records[0]["name"] == "スーパー"
+
+
+@patch("zaim_client.OAuth1Session")
+def test_fetch_sends_limit(mock_session_cls):
     mock_resp = MagicMock(status_code=200)
     mock_resp.json.return_value = {"money": []}
     mock_get = mock_session_cls.return_value.get
@@ -74,7 +94,6 @@ def test_fetch_sends_payment_mode_and_limit(mock_session_cls):
     ZaimClient().fetch_yesterday()
 
     _, kwargs = mock_get.call_args
-    assert kwargs["params"]["mode"] == "payment"
     assert kwargs["params"]["limit"] == 100
 
 
@@ -82,7 +101,7 @@ def test_fetch_sends_payment_mode_and_limit(mock_session_cls):
 def test_fetch_range_passes_dates(mock_session_cls):
     mock_resp = MagicMock(status_code=200)
     mock_resp.json.return_value = {
-        "money": [{"id": 7, "date": "2026-05-03", "amount": 100, "name": "x"}]
+        "money": [{"id": 7, "mode": "payment", "date": "2026-05-03", "amount": 100, "place": "x", "name": ""}]
     }
     mock_get = mock_session_cls.return_value.get
     mock_get.return_value = mock_resp
