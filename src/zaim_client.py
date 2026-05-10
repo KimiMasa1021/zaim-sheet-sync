@@ -1,3 +1,4 @@
+import logging
 import os
 import time
 from datetime import date, timedelta
@@ -6,6 +7,7 @@ from requests_oauthlib import OAuth1Session
 
 ZAIM_API_BASE = "https://api.zaim.net/v2"
 _RETRY_DELAYS = [1, 2, 4]
+logger = logging.getLogger(__name__)
 
 
 class ZaimAuthError(Exception):
@@ -31,13 +33,24 @@ class ZaimClient:
     def _fetch_money(self, start_date: str, end_date: str) -> list[dict]:
         url = f"{ZAIM_API_BASE}/home/money"
         params = {"mapping": 1, "mode": "payment", "limit": 100, "start_date": start_date, "end_date": end_date}
+        logger.info("Zaim API request: %s params=%s", url, params)
 
         for delay in [*_RETRY_DELAYS, None]:
             resp = self._session.get(url, params=params)
+            logger.info("Zaim API response: status=%d", resp.status_code)
             if resp.status_code == 401:
                 raise ZaimAuthError("Zaim authentication failed (401)")
             if resp.status_code < 500:
                 resp.raise_for_status()
+                body = resp.json()
+                money_list = body.get("money", [])
+                logger.info("Zaim API money count=%d", len(money_list))
+                if money_list:
+                    modes = [m.get("mode") for m in money_list]
+                    logger.info("Zaim API modes in response: %s", modes)
+                    logger.info("Zaim API first record: %s", money_list[0])
+                else:
+                    logger.info("Zaim API returned empty money list. Full body keys: %s", list(body.keys()))
                 return [
                     {
                         "zaim_id": str(m["id"]),
@@ -45,7 +58,7 @@ class ZaimClient:
                         "amount": m["amount"],
                         "name": m.get("place") or m.get("name", ""),
                     }
-                    for m in resp.json().get("money", [])
+                    for m in money_list
                 ]
             if delay is not None:
                 time.sleep(delay)
