@@ -50,6 +50,23 @@ def test_fetch_retries_on_5xx(mock_session_cls, mock_sleep):
 
 
 @patch("zaim_client.OAuth1Session")
+def test_fetch_uses_place_for_payment(mock_session_cls):
+    mock_resp = MagicMock(status_code=200)
+    mock_resp.json.return_value = {
+        "money": [
+            {"id": 10, "date": "2026-05-09", "amount": 980, "place": "ローソン", "name": ""},
+            {"id": 11, "date": "2026-05-09", "amount": 100000, "place": "", "name": "給与"},
+        ]
+    }
+    mock_session_cls.return_value.get.return_value = mock_resp
+
+    records = ZaimClient().fetch_yesterday()
+
+    assert records[0]["name"] == "ローソン"
+    assert records[1]["name"] == "給与"
+
+
+@patch("zaim_client.OAuth1Session")
 def test_fetch_range_passes_dates(mock_session_cls):
     mock_resp = MagicMock(status_code=200)
     mock_resp.json.return_value = {

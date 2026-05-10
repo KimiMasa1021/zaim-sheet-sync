@@ -43,7 +43,7 @@ class ZaimClient:
                         "zaim_id": str(m["id"]),
                         "date": m["date"],
                         "amount": m["amount"],
-                        "name": m["name"],
+                        "name": m.get("place") or m.get("name", ""),
                     }
                     for m in resp.json().get("money", [])
                 ]
